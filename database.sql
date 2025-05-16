@@ -18,6 +18,31 @@ CREATE TABLE IF NOT EXISTS usuarios (
     estado ENUM('activo', 'inactivo') DEFAULT 'activo'
 );
 
+-- Tabla de amigos
+CREATE TABLE IF NOT EXISTS amigos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    usuario_id INT NOT NULL,
+    amigo_id INT NOT NULL,
+    estado ENUM('pendiente', 'aceptado') DEFAULT 'pendiente',
+    fecha_solicitud DATETIME DEFAULT CURRENT_TIMESTAMP,
+    fecha_aceptacion DATETIME,
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (amigo_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_amistad (usuario_id, amigo_id)
+);
+
+-- Tabla de mensajes
+CREATE TABLE IF NOT EXISTS mensajes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    remitente_id INT NOT NULL,
+    destinatario_id INT NOT NULL,
+    mensaje TEXT NOT NULL,
+    fecha_envio DATETIME DEFAULT CURRENT_TIMESTAMP,
+    leido BOOLEAN DEFAULT FALSE,
+    FOREIGN KEY (remitente_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+    FOREIGN KEY (destinatario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+);
+
 -- Tabla de entradas del diario
 CREATE TABLE IF NOT EXISTS journal_entries (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -105,4 +130,6 @@ INSERT INTO tags (nombre, color) VALUES
 -- Crear índices para mejorar el rendimiento
 CREATE INDEX idx_journal_user_date ON journal_entries(user_id, created_at);
 CREATE INDEX idx_events_user_date ON calendar_events(user_id, event_date);
-CREATE INDEX idx_reminders_user_date ON reminders(user_id, fecha_recordatorio); 
+CREATE INDEX idx_reminders_user_date ON reminders(user_id, fecha_recordatorio);
+CREATE INDEX idx_amigos_usuarios ON amigos(usuario_id, amigo_id);
+CREATE INDEX idx_mensajes_usuarios ON mensajes(remitente_id, destinatario_id); 

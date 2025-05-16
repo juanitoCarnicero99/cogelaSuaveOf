@@ -124,13 +124,17 @@ foreach ($event_days as $date => $arr) {
                 <i class="fas fa-book"></i>
                 <span>Mi Diario</span>
             </a>
-            <a href="#" class="nav-item" id="sidebarEntriesBtn">
+            <a href="#" class="nav-item" id="sidebarEntriesBtn" onclick="showEntries()">
                 <i class="fas fa-list"></i>
                 <span>Mis Entradas</span>
             </a>
             <a href="#" class="nav-item" id="sidebarMyEventsBtn">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Mis eventos</span>
+            </a>
+            <a href="encontrar_personas.php" class="nav-item">
+                <i class="fas fa-users"></i>
+                <span>Encontrar Personas</span>
             </a>
             <a href="edit_profile.php" class="nav-item" title="Editar Perfil">
                 <i class="fas fa-user-edit"></i>
@@ -152,7 +156,22 @@ foreach ($event_days as $date => $arr) {
                     <button type="submit">Guardar Entrada</button>
                 </form>
             </div>
-            <div id="eventos-section" style="display:none;"></div>
+            <div id="eventos-section" class="calendar-section" style="display:none;">
+                <h2>Mis Eventos</h2>
+                <div class="event-form">
+                    <form method="POST" action="agregar_evento.php" class="event-entry-form">
+                        <h4>Agregar Nuevo Evento</h4>
+                        <input type="text" name="title" placeholder="Título del evento" required>
+                        <input type="date" name="event_date" required>
+                        <input type="time" name="event_time" required>
+                        <input type="color" name="event_color" value="#FF9900">
+                        <textarea name="description" placeholder="Descripción del evento"></textarea>
+                        <button type="submit">Agregar Evento</button>
+                    </form>
+                </div>
+                <div id="calendar"></div>
+                <button class="consultar-eventos-btn" id="consultarEventosBtn">Ver Todos los Eventos</button>
+            </div>
         </div>
     </div>
 
@@ -197,6 +216,7 @@ foreach ($event_days as $date => $arr) {
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Inicializar el calendario
             var calendarEl = document.getElementById('calendar');
             var calendar = new FullCalendar.Calendar(calendarEl, {
                 locale: 'es',
@@ -233,39 +253,74 @@ foreach ($event_days as $date => $arr) {
                     }
                 },
                 eventClick: function(info) {
-                    // Mostrar modal con detalles del evento
                     document.getElementById('modalTitle').textContent = info.event.title;
-                    document.getElementById('modalDate').textContent = new Date(info.event.start).toLocaleString('es-CO');
+                    document.getElementById('modalDate').textContent = new Date(info.event.start).toLocaleString('es-ES');
                     document.getElementById('modalDescription').textContent = info.event.extendedProps.description || 'Sin descripción';
                     document.getElementById('eventModal').style.display = 'block';
-                },
-                dateClick: function(info) {
-                    var events = calendar.getEvents().filter(function(event) {
-                        var eventDate = event.start;
-                        return eventDate.getFullYear() === info.date.getFullYear() &&
-                               eventDate.getMonth() === info.date.getMonth() &&
-                               eventDate.getDate() === info.date.getDate();
-                    });
-                    if (events.length > 0) {
-                        var html = '';
-                        events.forEach(function(event) {
-                            html += '<div style="margin-bottom:10px;"><strong>' + event.title + '</strong><br>' +
-                                (event.extendedProps.description || 'Sin descripción') + '</div>';
-                        });
-                        document.getElementById('modalTitle').textContent = 'Eventos del día';
-                        document.getElementById('modalDate').textContent = info.date.toLocaleDateString('es-CO');
-                        document.getElementById('modalDescription').innerHTML = html;
-                        document.getElementById('eventModal').style.display = 'block';
-                    }
                 }
             });
             calendar.render();
+
+            // Manejar el botón de Mis Eventos
+            document.getElementById('sidebarMyEventsBtn').onclick = function(e) {
+                e.preventDefault();
+                document.getElementById('diario-section').style.display = 'none';
+                document.getElementById('eventos-section').style.display = 'block';
+                document.querySelectorAll('a.nav-item').forEach(function(a) {
+                    a.classList.remove('active');
+                });
+                this.classList.add('active');
+                calendar.render();
+            };
+
+            // Manejar el botón de Ver Todos los Eventos
+            document.getElementById('consultarEventosBtn').onclick = function() {
+                var events = <?php echo json_encode($calendar_events); ?>;
+                if (events.length === 0) {
+                    document.getElementById('eventListContent').innerHTML = '<p>No hay eventos registrados.</p>';
+                } else {
+                    var html = '<div class="event-list">';
+                    events.forEach(function(event) {
+                        var date = new Date(event.event_date).toLocaleString('es-ES');
+                        html += `
+                            <div class="event-item" style="border-left: 4px solid ${event.color}">
+                                <div class="event-title">${event.title}</div>
+                                <div class="event-date">${date}</div>
+                                <div class="event-description">${event.description || 'Sin descripción'}</div>
+                                <button class="delete-event-btn" data-event-id="${event.id}">Eliminar</button>
+                            </div>
+                        `;
+                    });
+                    html += '</div>';
+                    document.getElementById('eventListContent').innerHTML = html;
+
+                    // Asignar eventos a los botones de eliminar
+                    document.querySelectorAll('.delete-event-btn').forEach(function(btn) {
+                        btn.onclick = function() {
+                            var eventId = this.getAttribute('data-event-id');
+                            document.getElementById('delete_event_id_modal').value = eventId;
+                            document.getElementById('confirmDeleteModal').style.display = 'block';
+                        };
+                    });
+                }
+                document.getElementById('eventListModal').style.display = 'block';
+            };
         });
 
-        // Modal cerrar
+        // Cerrar modales
         document.getElementById('closeModal').onclick = function() {
             document.getElementById('eventModal').style.display = 'none';
         };
+
+        document.getElementById('closeListModal').onclick = function() {
+            document.getElementById('eventListModal').style.display = 'none';
+        };
+
+        document.getElementById('cancelDeleteBtn').onclick = function() {
+            document.getElementById('confirmDeleteModal').style.display = 'none';
+        };
+
+        // Cerrar modales al hacer clic fuera
         window.onclick = function(event) {
             if (event.target == document.getElementById('eventModal')) {
                 document.getElementById('eventModal').style.display = 'none';
@@ -276,55 +331,6 @@ foreach ($event_days as $date => $arr) {
             if (event.target == document.getElementById('confirmDeleteModal')) {
                 document.getElementById('confirmDeleteModal').style.display = 'none';
             }
-            if (event.target == document.getElementById('entriesModal')) {
-                document.getElementById('entriesModal').style.display = 'none';
-            }
-        };
-
-        // Modal lista de eventos
-        document.getElementById('consultarEventosBtn').onclick = function() {
-            var events = <?php echo json_encode($calendar_events); ?>;
-            if (events.length === 0) {
-                document.getElementById('eventListContent').innerHTML = '<p>No hay eventos registrados.</p>';
-            } else {
-                // Agrupar eventos por fecha
-                var grouped = {};
-                events.forEach(function(event) {
-                    var date = (new Date(event.event_date)).toLocaleDateString('es-CO');
-                    if (!grouped[date]) grouped[date] = [];
-                    grouped[date].push(event);
-                });
-                var html = '';
-                Object.keys(grouped).sort().forEach(function(date) {
-                    html += '<div style="margin-bottom:10px;"><strong>' + date + '</strong><ul>';
-                    grouped[date].forEach(function(event) {
-                        html += '<li>' + event.title + ' - ' + (event.description || 'Sin descripción') +
-                            ' <button class="delete-event-btn" data-event-id="' + event.id + '">Eliminar</button>' +
-                            '</li>';
-                    });
-                    html += '</ul></div>';
-                });
-                document.getElementById('eventListContent').innerHTML = html;
-            }
-            document.getElementById('eventListModal').style.display = 'block';
-
-            // Asignar eventos a los nuevos botones de eliminar
-            document.querySelectorAll('.delete-event-btn').forEach(function(btn) {
-                btn.onclick = function(e) {
-                    e.preventDefault();
-                    var eventId = this.getAttribute('data-event-id');
-                    document.getElementById('delete_event_id_modal').value = eventId;
-                    document.getElementById('confirmDeleteModal').style.display = 'block';
-                };
-            });
-        };
-        document.getElementById('closeListModal').onclick = function() {
-            document.getElementById('eventListModal').style.display = 'none';
-        };
-
-        // Cerrar modal de confirmación
-        document.getElementById('cancelDeleteBtn').onclick = function() {
-            document.getElementById('confirmDeleteModal').style.display = 'none';
         };
 
         // Frases motivacionales
@@ -350,43 +356,45 @@ foreach ($event_days as $date => $arr) {
         }, 6000);
 
         // Mis Entradas
-        document.getElementById('sidebarEntriesBtn').onclick = function(e) {
-            e.preventDefault();
-            var modal = document.getElementById('entriesModal');
-            var content = document.getElementById('entriesModalContent');
-            content.innerHTML = '<div style="text-align:center;padding:30px;">Cargando...</div>';
-            modal.style.display = 'block';
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', 'mis_entradas_anteriores.php', true);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    content.innerHTML = xhr.responseText;
-                } else {
-                    content.innerHTML = '<div style="text-align:center;padding:30px;">Error al cargar las entradas.</div>';
-                }
-            };
-            xhr.send();
-        };
-        // Mis eventos
-        document.getElementById('sidebarMyEventsBtn').onclick = function(e) {
-            e.preventDefault();
-            document.getElementById('diario-section').style.display = 'none';
-            document.getElementById('eventos-section').style.display = '';
-            document.querySelectorAll('a.nav-item').forEach(function(a){a.classList.remove('active');});
-            this.classList.add('active');
-            var eventosSection = document.getElementById('eventos-section');
-            eventosSection.innerHTML = '<div style="text-align:center;padding:30px;">Cargando...</div>';
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', 'mis_eventos.php', true);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    eventosSection.innerHTML = xhr.responseText;
-                } else {
-                    eventosSection.innerHTML = '<div style="text-align:center;padding:30px;">Error al cargar los eventos.</div>';
-                }
-            };
-            xhr.send();
-        };
+        function showEntries() {
+            fetch('obtener_entradas.php')
+                .then(response => response.json())
+                .then(data => {
+                    let content = '<h3>Mis Entradas Anteriores</h3>';
+                    if (data.length === 0) {
+                        content += '<p>No tienes entradas guardadas aún.</p>';
+                    } else {
+                        content += '<div class="entries-list">';
+                        data.forEach(entry => {
+                            const date = new Date(entry.created_at).toLocaleDateString('es-ES', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                            });
+                            content += `
+                                <div class="entry-item">
+                                    <div class="entry-date">${date}</div>
+                                    <div class="entry-content">${entry.entry}</div>
+                                </div>
+                            `;
+                        });
+                        content += '</div>';
+                    }
+                    document.getElementById('entriesModalContent').innerHTML = content;
+                    document.getElementById('entriesModal').style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al cargar las entradas');
+                });
+        }
+
+        // Cerrar el modal de entradas
+        document.getElementById('closeEntriesModal').addEventListener('click', function() {
+            document.getElementById('entriesModal').style.display = 'none';
+        });
     </script>
 </body>
 </html>
