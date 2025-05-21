@@ -187,6 +187,10 @@ $usuarios = $result->fetch_all(MYSQLI_ASSOC);
                 <i class="fas fa-users"></i>
                 <span>Encontrar Personas</span>
             </a>
+            <a href="capsulas.php" class="nav-item">
+                <i class="fas fa-lightbulb"></i>
+                <span>Cápsulas</span>
+            </a>
             <a href="chat.php" class="nav-item">
                 <i class="fas fa-user-friends"></i>
                 <span>Mis Amigos</span>
